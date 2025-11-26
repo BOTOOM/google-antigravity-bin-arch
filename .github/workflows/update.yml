@@ -78,13 +78,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Update PKGBUILD
+      - name: Update PKGBUILD and README
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
           SHA256SUM="${{ needs.check-version.outputs.sha256sum }}"
           DEB_URL="${{ needs.check-version.outputs.deb_url }}"
           PKGBUILD_PATH="package/PKGBUILD"
+          README_PATH="README.md"
           
+          # --- Update PKGBUILD ---
           # Update pkgver
           sed -i "s/^pkgver=.*/pkgver=$VERSION/" "$PKGBUILD_PATH"
           
@@ -101,6 +103,13 @@ jobs:
           
           cat "$PKGBUILD_PATH"
 
+          # --- Update README.md ---
+          # Update the text "Latest Version Available: `X.Y.Z`"
+          sed -i "s/\*\*Latest Version Available:\*\* \`.*\`/**Latest Version Available:** \`$VERSION\`/" "$README_PATH"
+          
+          # Update the badge "version-X.Y.Z-blue"
+          sed -i "s/badge\/version-.*-blue/badge\/version-$VERSION-blue/" "$README_PATH"
+
       - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@v5
@@ -110,6 +119,9 @@ jobs:
           title: "Update google-antigravity to ${{ needs.check-version.outputs.version }}"
           body: |
             This PR updates the google-antigravity package to version ${{ needs.check-version.outputs.version }}.
+            
+            - Updated PKGBUILD version, checksum, and URL.
+            - Updated README.md with the new version number and badge.
             
             This is an automated PR created by the version check workflow.
           branch: "update-antigravity-${{ needs.check-version.outputs.version }}"
