@@ -2,7 +2,7 @@
 
 pkgbase=google-antigravity-bin
 pkgname=(google-antigravity-bin)
-pkgver=1.11.9
+pkgver=1.11.13
 pkgrel=1
 arch=('x86_64')
 url="https://antigravity.google/"
@@ -22,9 +22,9 @@ depends=('alsa-lib'
     'fd')
 options=('!strip')
 makedepends=(tar sed desktop-file-utils)
-source=("https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/pool/antigravity-debian/antigravity_1.11.9-1764120415_amd64_645c2dc91f7e01423b7163dae193052f.deb"
+source=("https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/pool/antigravity-debian/antigravity_1.11.13-1764808015_amd64_8bc342d4c140b28c7fdd0f945033f696.deb"
 		"https://gitlab.archlinux.org/archlinux/packaging/packages/code/-/raw/main/code.sh")
-sha256sums=('96bc49a6a2d44cebef29a3592088a0501a517e06e809e0754dee9f3f6286916c'
+sha256sums=('4304347e9257ecbc75e0e023f42fe6dcc0c87bae093b4acfacc021a91c2703f6'
             '5da1525b5fe804b9192c05e1cbf8d751d852e3717fb2787c7ffe98fd5d93e8c1')
 
 build() {
