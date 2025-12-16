@@ -31,15 +31,10 @@ jobs:
         id: get_version
         run: |
           chmod +x ./scripts/check-antigravity-version.sh
-          # Run the check script (it needs sudo for apt configuration if running on a fresh runner, but the script uses tee/etc so it might need sudo)
-          # However, check-antigravity-version.sh writes to /etc/apt/sources.list.d/, so it needs sudo.
-          # But it outputs to stdout.
           OUTPUT=$(sudo ./scripts/check-antigravity-version.sh)
           
-          # The script outputs: VERSION SHA256SUM URL
           VERSION=$(echo "$OUTPUT" | cut -d' ' -f1)
           SHA256SUM=$(echo "$OUTPUT" | cut -d' ' -f2)
-          # URL might be the 3rd argument, or we can parse it differently if spaces are involved, but usually URL has no spaces.
           DEB_URL=$(echo "$OUTPUT" | cut -d' ' -f3)
           
           echo "Detected version: $VERSION"
@@ -51,7 +46,6 @@ jobs:
         id: check_version
         run: |
           CURRENT_VERSION=$(grep -oP 'pkgver=\K[^"]+' package/PKGBUILD || true)
-          # If extraction fails (e.g. assumes quotes or not), try fallback
           if [ -z "$CURRENT_VERSION" ]; then
              CURRENT_VERSION=$(grep '^pkgver=' package/PKGBUILD | cut -d'=' -f2)
           fi
@@ -87,27 +81,15 @@ jobs:
           README_PATH="README.md"
           
           # --- Update PKGBUILD ---
-          # Update pkgver
           sed -i "s/^pkgver=.*/pkgver=$VERSION/" "$PKGBUILD_PATH"
-          
-          # Update pkgrel to 1
           sed -i "s/^pkgrel=.*/pkgrel=1/" "$PKGBUILD_PATH"
-          
-          # Update source URL (escape slashes in URL for sed)
-          # Using different delimiter |
           sed -i "s|source=(\"[^\"]*\"|source=(\"$DEB_URL\"|" "$PKGBUILD_PATH"
-          
-          # Update checksum
-          # Replaces the first hash found in sha256sums array
           sed -i "/^sha256sums=('/s/'[^']*'/'$SHA256SUM'/" "$PKGBUILD_PATH"
           
           cat "$PKGBUILD_PATH"
 
           # --- Update README.md ---
-          # Update the text "Latest Version Available: `X.Y.Z`"
           sed -i "s/\*\*Latest Version Available:\*\* \`.*\`/**Latest Version Available:** \`$VERSION\`/" "$README_PATH"
-          
-          # Update the badge "version-X.Y.Z-blue"
           sed -i "s/badge\/version-.*-blue/badge\/version-$VERSION-blue/" "$README_PATH"
 
       - name: Create Pull Request
@@ -138,3 +120,99 @@ jobs:
           echo "Attempting to merge PR #${PR_NUMBER}"
           gh pr merge "$PR_NUMBER" --merge --delete-branch --repo "${{ github.repository }}"
           echo "PR #${PR_NUMBER} merged."
+
+  publish-to-aur:
+    needs: [check-version, update-package]
+    if: needs.check-version.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pull latest changes
+        run: git pull origin main
+
+      - name: Install pacman tools for .SRCINFO generation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make
+
+      - name: Setup SSH for AUR
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          
+          cat >> ~/.ssh/config << EOF
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur
+            User aur
+            StrictHostKeyChecking no
+          EOF
+          
+          chmod 600 ~/.ssh/config
+
+      - name: Clone AUR repository
+        run: |
+          git clone ssh://aur@aur.archlinux.org/google-antigravity-bin.git aur-repo || {
+            echo "Repository doesn't exist yet, will be created on first push"
+            mkdir aur-repo
+            cd aur-repo
+            git init
+            git remote add origin ssh://aur@aur.archlinux.org/google-antigravity-bin.git
+          }
+
+      - name: Generate .SRCINFO and prepare AUR package
+        run: |
+          cd aur-repo
+          
+          # Copy PKGBUILD from main repo
+          cp ../package/PKGBUILD .
+          
+          # Generate .SRCINFO manually (since we can't run makepkg on Ubuntu)
+          # Using a simple script to parse PKGBUILD
+          cat > generate-srcinfo.sh << 'SCRIPT'
+          #!/bin/bash
+          source ./PKGBUILD
+          
+          echo "pkgbase = ${pkgname}"
+          echo "	pkgdesc = ${pkgdesc}"
+          echo "	pkgver = ${pkgver}"
+          echo "	pkgrel = ${pkgrel}"
+          echo "	url = ${url}"
+          for a in "${arch[@]}"; do echo "	arch = $a"; done
+          echo "	license = ${license}"
+          for p in "${provides[@]}"; do echo "	provides = $p"; done
+          for c in "${conflicts[@]}"; do echo "	conflicts = $c"; done
+          for d in "${depends[@]}"; do echo "	depends = $d"; done
+          for m in "${makedepends[@]}"; do echo "	makedepends = $m"; done
+          for o in "${options[@]}"; do echo "	options = $o"; done
+          for s in "${source[@]}"; do echo "	source = $s"; done
+          for sum in "${sha256sums[@]}"; do echo "	sha256sums = $sum"; done
+          echo ""
+          echo "pkgname = ${pkgname}"
+          SCRIPT
+          
+          chmod +x generate-srcinfo.sh
+          ./generate-srcinfo.sh > .SRCINFO
+          rm generate-srcinfo.sh
+          
+          echo "Generated .SRCINFO:"
+          cat .SRCINFO
+
+      - name: Commit and push to AUR
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          cd aur-repo
+          
+          git config user.email "edwardiaz.dev@gmail.com"
+          git config user.name "Edward Diaz"
+          
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to version ${VERSION}" || echo "No changes to commit"
+          git push origin master || git push origin HEAD:master

@@ -1,13 +1,14 @@
-# Maintainer: User edwardiaz.dev@gmail.com
+# Maintainer: Edward Diaz <edwardiaz.dev@gmail.com>
 
-pkgbase=google-antigravity-bin
-pkgname=(google-antigravity-bin)
+pkgname=google-antigravity-bin
 pkgver=1.11.17
 pkgrel=1
+pkgdesc="Google Antigravity IDE - The new agentic development platform"
 arch=('x86_64')
 url="https://antigravity.google/"
-pkgdesc="Google Antigravity IDE - The new agentic development platform"
 license=('custom')
+provides=('antigravity' 'google-antigravity')
+conflicts=('antigravity' 'google-antigravity')
 depends=('alsa-lib'
     'dbus'
     'gnupg'
@@ -20,12 +21,12 @@ depends=('alsa-lib'
     'xdg-utils'
     'ripgrep'
     'fd')
+makedepends=('tar' 'sed' 'desktop-file-utils')
 options=('!strip')
-makedepends=(tar sed desktop-file-utils)
 source=("https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/pool/antigravity-debian/antigravity_1.11.17-1765244408_amd64_9df0712156d4f7f37ea353feaa9633ca.deb"
-		"https://gitlab.archlinux.org/archlinux/packaging/packages/code/-/raw/main/code.sh")
+    "https://gitlab.archlinux.org/archlinux/packaging/packages/code/-/raw/main/code.sh")
 sha256sums=('f5b61a4d00354f846e8850a2da9e87b7e204298f0f5cfa0365ede7207c7fc897'
-            '5da1525b5fe804b9192c05e1cbf8d751d852e3717fb2787c7ffe98fd5d93e8c1')
+    '5da1525b5fe804b9192c05e1cbf8d751d852e3717fb2787c7ffe98fd5d93e8c1')
 
 build() {
 	tar -xf "data.tar.xz"
@@ -65,15 +66,12 @@ build() {
     echo "exec /usr/share/antigravity/antigravity \"\$@\"" >> antigravity.sh
 }
 
-package_google-antigravity-bin(){
-	cp -r --reflink=auto usr "${pkgdir}/usr"
+package() {
+    cp -r --reflink=auto usr "${pkgdir}/usr"
     
     # Install the wrapper script
-	install -Dm755 antigravity.sh "${pkgdir}/usr/bin/antigravity"
+    install -Dm755 antigravity.sh "${pkgdir}/usr/bin/antigravity"
     
     # Symlink for google-antigravity if desired
     ln -s /usr/bin/antigravity "${pkgdir}/usr/bin/google-antigravity"
-    
-	provides=(antigravity google-antigravity)
-	conflicts=(antigravity google-antigravity)
 }
