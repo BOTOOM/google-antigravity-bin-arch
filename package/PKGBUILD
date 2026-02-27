@@ -1,7 +1,7 @@
 # Maintainer: Edward Diaz <edwardiaz.dev@gmail.com>
 
 pkgname=google-antigravity-bin
-pkgver=1.19.5
+pkgver=1.19.6
 pkgrel=1
 pkgdesc="Google Antigravity IDE (binary) - Precompiled official .deb repackaged for Arch - An agentic development platform from Google, evolving the IDE into the agent-first era."
 arch=('x86_64')
@@ -23,9 +23,9 @@ depends=('alsa-lib'
     'fd')
 makedepends=('tar' 'sed' 'desktop-file-utils')
 options=('!strip')
-source=("https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/pool/antigravity-debian/antigravity_1.19.5-1772095947_amd64_c54799e9c89b1ec7c5b6acc14aa95383.deb"
+source=("https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/pool/antigravity-debian/antigravity_1.19.6-1772152296_amd64_4adf927f23143e77a9a759c97e46fe6f.deb"
     "https://gitlab.archlinux.org/archlinux/packaging/packages/code/-/raw/main/code.sh")
-sha256sums=('25487373c7ccb695adb99f45c750655841c4f1d4b657cb7962ec833c42beceed'
+sha256sums=('04da15e1db2b7bd9c39708d62a2a42fc4e42ceafd977aac9a638c771117a3d7b'
     '5da1525b5fe804b9192c05e1cbf8d751d852e3717fb2787c7ffe98fd5d93e8c1')
 
 build() {
