@@ -3,7 +3,7 @@ name: Update Google Antigravity PKGBUILD
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 */4 * * *" # Run every 4 hours
+    - cron: "0 */5 * * *" # Run every 5 hours
 
 permissions:
   contents: write

@@ -56,7 +56,7 @@ If you want to check for updates directly from Google yourself (e.g., if the rep
 - `_install_local.sh`: Internal script used by `check_and_update_local.sh` to perform the actual installation.
 - `update.sh`: The core logic that runs the Docker container to fetch version info.
 - `package/PKGBUILD`: The Arch Linux package build description file.
-- `.github/workflows/update.yml`: GitHub Action that runs periodically to update the `PKGBUILD` in this repository automatically.
+- `.github/workflows/update.yml`: GitHub Action that runs periodically (every 5 hours) to update the `PKGBUILD` in this repository automatically.
 
 ## Disclaimer
 
