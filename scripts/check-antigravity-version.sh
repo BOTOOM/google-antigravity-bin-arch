@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x  # Enable debug output
+set -euo pipefail
 
 # Set up temporary directory
 TEMP_DIR=$(mktemp -d)
@@ -10,32 +10,33 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Download and set up the repository key
-curl -fsSL "https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg" -o "$TEMP_DIR/antigravity.gpg"
+# Download and set up the repository key (Antigravity 2)
+if ! curl -fsSL "https://antigravity.google/apt/antigravity.asc" -o "$TEMP_DIR/antigravity.asc"; then
+    # Fallback to legacy key location
+    curl -fsSL "https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg" -o "$TEMP_DIR/antigravity.asc"
+fi
 
 # Add the key to apt's trusted keys
-cat "$TEMP_DIR/antigravity.gpg" | gpg --batch --yes --dearmor -o "/usr/share/keyrings/antigravity-archive-keyring.gpg"
+gpg --batch --yes --dearmor -o "/usr/share/keyrings/antigravity-archive-keyring.gpg" "$TEMP_DIR/antigravity.asc"
 
-# Create sources list
-# Note: antigravity-debian is the distribution name found in docs
-echo "deb [signed-by=/usr/share/keyrings/antigravity-archive-keyring.gpg arch=amd64] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" | tee /etc/apt/sources.list.d/antigravity.list > /dev/null
+# Create sources list (Antigravity 2 repository)
+echo "deb [signed-by=/usr/share/keyrings/antigravity-archive-keyring.gpg arch=amd64] https://antigravity.google/apt stable main" | tee /etc/apt/sources.list.d/antigravity.list > /dev/null
 
 # Update package lists for the repository
 apt-get update > /dev/null 2>&1
 
-# Search for the package name if not sure (uncomment for debugging)
-# apt-cache search antigravity
+# Get package version using candidate package names
+PACKAGE_NAME=""
+VERSION=""
 
-# Get package version
-# Assuming package name is 'antigravity' or 'google-antigravity'. Trying 'antigravity' first based on search results.
-PACKAGE_NAME="antigravity"
-VERSION=$(apt-cache madison "$PACKAGE_NAME" | head -n1 | awk '{ print $3 }' | cut -d'-' -f1)
-
-# If version is empty, try 'google-antigravity'
-if [ -z "$VERSION" ]; then
-    PACKAGE_NAME="google-antigravity"
-    VERSION=$(apt-cache madison "$PACKAGE_NAME" | head -n1 | awk '{ print $3 }' | cut -d'-' -f1)
-fi
+for candidate in antigravity google-antigravity; do
+    CANDIDATE_VERSION=$(apt-cache madison "$candidate" | head -n1 | awk '{ print $3 }' | cut -d'-' -f1)
+    if [ -n "$CANDIDATE_VERSION" ]; then
+        PACKAGE_NAME="$candidate"
+        VERSION="$CANDIDATE_VERSION"
+        break
+    fi
+done
 
 if [ -n "$VERSION" ]; then
     # Construct DEB URL
