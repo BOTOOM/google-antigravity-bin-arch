@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl gnupg apt-transport-https coreutils
+          sudo apt-get install -y ca-certificates curl gnupg apt-transport-https coreutils
 
       - name: Get latest version
         id: get_version
