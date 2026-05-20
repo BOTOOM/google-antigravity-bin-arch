@@ -1,4 +1,4 @@
-name: Update Google Antigravity PKGBUILD
+name: Update Google Antigravity IDE PKGBUILD
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ jobs:
       changed: ${{ steps.check_version.outputs.changed }}
       version: ${{ steps.get_version.outputs.version }}
       sha256sum: ${{ steps.get_version.outputs.sha256sum }}
-      deb_url: ${{ steps.get_version.outputs.deb_url }}
+      download_url: ${{ steps.get_version.outputs.download_url }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -35,12 +35,12 @@ jobs:
           
           VERSION=$(echo "$OUTPUT" | cut -d' ' -f1)
           SHA256SUM=$(echo "$OUTPUT" | cut -d' ' -f2)
-          DEB_URL=$(echo "$OUTPUT" | cut -d' ' -f3)
+          DOWNLOAD_URL=$(echo "$OUTPUT" | cut -d' ' -f3)
           
           echo "Detected version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "sha256sum=$SHA256SUM" >> $GITHUB_OUTPUT
-          echo "deb_url=$DEB_URL" >> $GITHUB_OUTPUT
+          echo "download_url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
 
       - name: Check if version changed
         id: check_version
@@ -76,7 +76,7 @@ jobs:
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
           SHA256SUM="${{ needs.check-version.outputs.sha256sum }}"
-          DOWNLOAD_URL="${{ needs.check-version.outputs.deb_url }}"
+          DOWNLOAD_URL="${{ needs.check-version.outputs.download_url }}"
           PKGBUILD_PATH="package/PKGBUILD"
           README_PATH="README.md"
           
@@ -99,16 +99,16 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: update google-antigravity to ${{ needs.check-version.outputs.version }}"
-          title: "Update google-antigravity to ${{ needs.check-version.outputs.version }}"
+          commit-message: "chore: update antigravity ide to ${{ needs.check-version.outputs.version }}"
+          title: "Update Antigravity IDE to ${{ needs.check-version.outputs.version }}"
           body: |
-            This PR updates the google-antigravity package to version ${{ needs.check-version.outputs.version }}.
+            This PR updates the google-antigravity package to Antigravity IDE version ${{ needs.check-version.outputs.version }}.
             
             - Updated PKGBUILD version, checksum, and URL.
             - Updated README.md with the new version number and badge.
             
             This is an automated PR created by the version check workflow.
-          branch: "update-antigravity-${{ needs.check-version.outputs.version }}"
+          branch: "update-antigravity-ide-${{ needs.check-version.outputs.version }}"
           base: "main"
           labels: "automated pr"
           delete-branch: true

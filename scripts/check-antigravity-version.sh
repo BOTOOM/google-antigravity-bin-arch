@@ -3,25 +3,45 @@
 set -euo pipefail
 
 DOWNLOAD_PAGE="https://antigravity.google/download"
-CDN_BASE="https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable"
 
 TEMP_DIR=$(mktemp -d)
 cleanup() { rm -rf "$TEMP_DIR"; }
 trap cleanup EXIT
 
 # Step 1: Find the JS bundle name from the download page
-JS_FILE=$(curl -fsSL --compressed "$DOWNLOAD_PAGE" | grep -oP 'main-[A-Z0-9]+\.js' | head -1)
+JS_FILE=$(
+    curl -fsSL --compressed "$DOWNLOAD_PAGE" \
+        | grep -oP 'main-[A-Z0-9]+\.js' \
+        | head -1 \
+        || true
+)
 if [ -z "$JS_FILE" ]; then
     echo "Failed to find JS bundle on download page" >&2
     exit 1
 fi
 
-# Step 2: Extract the latest Linux x64 tar.gz download URL from the JS
-DOWNLOAD_URL=$(curl -fsSL --compressed "https://antigravity.google/$JS_FILE" | \
-    grep -oP 'https://edgedl\.me\.gvt1\.com/edgedl/release2/j0qc3/antigravity/stable/[^"'\''"\x60]+linux-x64/[^"'\''"\x60]+\.tar\.gz' | head -1)
+# Step 2: Extract the latest Antigravity IDE Linux x64 tar.gz download URL from the JS.
+# The download page currently mixes multiple product channels, so only track concrete
+# Antigravity IDE artifacts and choose the highest semantic version found.
+DOWNLOAD_URL=$(
+    curl -fsSL --compressed "https://antigravity.google/$JS_FILE" \
+        | grep -oP 'https://edgedl\.me\.gvt1\.com/edgedl/release2/j0qc3/antigravity/stable/[0-9]+\.[0-9]+\.[0-9]+-[0-9]+/linux-x64/Antigravity%20IDE\.tar\.gz' \
+        | awk '
+            {
+                version = $0
+                sub(/^.*\/stable\//, "", version)
+                sub(/-[0-9]+\/linux-x64\/Antigravity%20IDE\.tar\.gz$/, "", version)
+                print version "\t" $0
+            }
+        ' \
+        | sort -t $'\t' -k1,1V \
+        | tail -n1 \
+        | cut -f2- \
+        || true
+)
 
 if [ -z "$DOWNLOAD_URL" ]; then
-    echo "Failed to extract download URL from JS bundle" >&2
+    echo "Failed to extract Antigravity IDE download URL from JS bundle" >&2
     exit 1
 fi
 

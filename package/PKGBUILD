@@ -1,7 +1,7 @@
 # Maintainer: Edward Diaz <edwardiaz.dev@gmail.com>
 
 pkgname=google-antigravity-bin
-pkgver=2.0.1
+pkgver=2.0.0
 pkgrel=1
 pkgdesc="Google Antigravity IDE (binary) - Precompiled official tar.gz repackaged for Arch - An agentic development platform from Google, evolving the IDE into the agent-first era."
 arch=('x86_64')

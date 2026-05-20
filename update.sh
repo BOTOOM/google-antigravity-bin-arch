@@ -21,6 +21,7 @@ check_command() {
 
 # --- Main Script ---
 check_command "docker"
+check_command "perl"
 check_command "sed"
 
 # 1. Build the Docker image to ensure it's up-to-date

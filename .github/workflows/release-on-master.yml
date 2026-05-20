@@ -7,7 +7,7 @@ on:
       - main
   workflow_run:
     workflows:
-      - Update Google Antigravity PKGBUILD
+      - Update Google Antigravity IDE PKGBUILD
     types:
       - completed
 
@@ -23,6 +23,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates curl coreutils
+
+      - name: Detect latest upstream version
+        id: upstream
+        run: |
+          chmod +x ./scripts/check-antigravity-version.sh
+          OUTPUT=$(./scripts/check-antigravity-version.sh)
+          VERSION=$(echo "$OUTPUT" | cut -d' ' -f1 | tr -d '[:space:]')
+
+          if [ -z "$VERSION" ]; then
+            echo "Could not determine latest upstream version"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Extract version from PKGBUILD
         id: version
         run: |
@@ -36,8 +55,24 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Check if main is on latest upstream version
+        id: freshness
+        run: |
+          CURRENT_VERSION="${{ steps.version.outputs.version }}"
+          LATEST_VERSION="${{ steps.upstream.outputs.version }}"
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "Latest upstream version: $LATEST_VERSION"
+
+          if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
+            echo "is_latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_latest=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Check if release already exists
         id: release_exists
+        if: steps.freshness.outputs.is_latest == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -59,6 +94,7 @@ jobs:
 
       - name: Determine target commit
         id: target
+        if: steps.freshness.outputs.is_latest == 'true'
         run: |
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
@@ -66,18 +102,23 @@ jobs:
             echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Skip release on stale main
+        if: steps.freshness.outputs.is_latest != 'true'
+        run: |
+          echo "package/PKGBUILD is behind upstream. Skipping release until main is updated."
+
       - name: Create GitHub Release
-        if: steps.release_exists.outputs.exists == 'false'
+        if: steps.freshness.outputs.is_latest == 'true' && steps.release_exists.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Release ${{ steps.version.outputs.tag }}
+          name: Antigravity IDE ${{ steps.version.outputs.tag }}
           target_commitish: ${{ steps.target.outputs.sha }}
           generate_release_notes: true
           body: |
-            Automated release created after merge/push to main.
+            Automated Antigravity IDE release created after merge/push to main.
             Package version: `${{ steps.version.outputs.version }}`.
 
       - name: Release already exists
-        if: steps.release_exists.outputs.exists == 'true'
+        if: steps.freshness.outputs.is_latest == 'true' && steps.release_exists.outputs.exists == 'true'
         run: echo "Release ${{ steps.version.outputs.tag }} already exists. Skipping."
