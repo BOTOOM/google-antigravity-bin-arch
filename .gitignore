@@ -1,2 +1,5 @@
 package/**
 !package/PKGBUILD
+!package/antigravity-ide.desktop
+!package/antigravity-ide-url-handler.desktop
+!package/antigravity-ide.png

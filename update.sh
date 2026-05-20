@@ -77,11 +77,11 @@ sed -i "s/^pkgver=.*/pkgver=$LATEST_VERSION/" "$PKGBUILD_PATH"
 # Update pkgrel to 1
 sed -i "s/^pkgrel=.*/pkgrel=1/" "$PKGBUILD_PATH"
 
-# Update source URL
-sed -i "s|source=(\"[^\"]*\")|source=(\"$LATEST_URL\")|" "$PKGBUILD_PATH"
+# Update source URL (only first line of source array)
+perl -i -pe 'BEGIN{$u=shift} if (!$done && s{source=\("[^"]*"}{source=("$u"}) { $done=1 }' "$LATEST_URL" "$PKGBUILD_PATH"
 
-# Update sha256sum
-sed -i "s/^sha256sums=(.*/sha256sums=('$LATEST_SHA256')/" "$PKGBUILD_PATH"
+# Update sha256sum (only first checksum)
+perl -i -pe 'BEGIN{$s=shift} if (!$done && s/'"'"'[a-f0-9]{64}'"'"'/'"'"'$s'"'"'/) { $done=1 }' "$LATEST_SHA256" "$PKGBUILD_PATH"
 
 log "PKGBUILD updated successfully!"
 log "New version: $LATEST_VERSION"

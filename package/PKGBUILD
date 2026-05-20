@@ -23,8 +23,14 @@ depends=('alsa-lib'
     'fd')
 makedepends=('tar')
 options=('!strip')
-source=("https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.0.1-4861014005645312/linux-x64/Antigravity%20IDE.tar.gz")
-sha256sums=('747163aa3a8afba4b316f97c40b4a75ca4736a59768a416cd1e881e73ec31ef9')
+source=("https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.0.1-4861014005645312/linux-x64/Antigravity%20IDE.tar.gz"
+    "antigravity-ide.desktop"
+    "antigravity-ide-url-handler.desktop"
+    "antigravity-ide.png")
+sha256sums=('747163aa3a8afba4b316f97c40b4a75ca4736a59768a416cd1e881e73ec31ef9'
+    'SKIP'
+    'SKIP'
+    'SKIP')
 
 _appdir="Antigravity IDE"
 _installdir="usr/share/antigravity-ide"
@@ -39,33 +45,18 @@ package() {
     install -dm755 "${pkgdir}/${_installdir}"
     cp -r --reflink=auto "${srcdir}/${_appdir}/." "${pkgdir}/${_installdir}/"
 
-    # Install the wrapper script
+    # Install the CLI wrapper script (bin/antigravity-ide from upstream)
     install -dm755 "${pkgdir}/usr/bin"
-    cat > "${pkgdir}/usr/bin/antigravity-ide" << 'EOF'
-#!/bin/bash
-XDG_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
-FLAG_FILE="${XDG_CONFIG_DIR}/antigravity-ide-flags.conf"
-FLAGS=()
-if [[ -f "$FLAG_FILE" ]]; then
-    mapfile -t FLAGS < <(grep -v '^#' "$FLAG_FILE" | grep -v '^$')
-fi
-exec /usr/share/antigravity-ide/bin/antigravity-ide "${FLAGS[@]}" "$@"
-EOF
-    chmod 755 "${pkgdir}/usr/bin/antigravity-ide"
+    ln -s "/usr/share/antigravity-ide/bin/antigravity-ide" "${pkgdir}/usr/bin/antigravity-ide"
 
     # Backward-compatible symlinks
     ln -s /usr/bin/antigravity-ide "${pkgdir}/usr/bin/antigravity"
     ln -s /usr/bin/antigravity-ide "${pkgdir}/usr/bin/google-antigravity"
 
-    # Install .desktop file if present in the archive
-    if [ -d "${srcdir}/${_appdir}/resources/app/resources/linux" ]; then
-        for desktop_file in "${srcdir}/${_appdir}/resources/app/resources/linux/"*.desktop; do
-            [ -f "$desktop_file" ] && install -Dm644 "$desktop_file" "${pkgdir}/usr/share/applications/$(basename "$desktop_file")"
-        done
-    fi
+    # Install .desktop files
+    install -Dm644 "${srcdir}/antigravity-ide.desktop" "${pkgdir}/usr/share/applications/antigravity-ide.desktop"
+    install -Dm644 "${srcdir}/antigravity-ide-url-handler.desktop" "${pkgdir}/usr/share/applications/antigravity-ide-url-handler.desktop"
 
-    # Install icon if present
-    for icon in "${srcdir}/${_appdir}/resources/app/resources/linux/"*.png; do
-        [ -f "$icon" ] && install -Dm644 "$icon" "${pkgdir}/usr/share/pixmaps/antigravity-ide.png" && break
-    done
+    # Install icon
+    install -Dm644 "${srcdir}/antigravity-ide.png" "${pkgdir}/usr/share/pixmaps/antigravity-ide.png"
 }

@@ -83,9 +83,10 @@ jobs:
           # --- Update PKGBUILD ---
           sed -i "s/^pkgver=.*/pkgver=$VERSION/" "$PKGBUILD_PATH"
           sed -i "s/^pkgrel=.*/pkgrel=1/" "$PKGBUILD_PATH"
-          # Replace the source URL (tar.gz)
-          sed -i "s|source=(\"[^\"]*\")|source=(\"$DOWNLOAD_URL\")|" "$PKGBUILD_PATH"
-          sed -i "s/^sha256sums=(.*/sha256sums=('$SHA256SUM')/" "$PKGBUILD_PATH"
+          # Replace only the first source URL (tar.gz)
+          perl -i -pe 'BEGIN{$u=shift} if (!$done && s{source=\("[^"]*"}{source=("$u"}) { $done=1 }' "$DOWNLOAD_URL" "$PKGBUILD_PATH"
+          # Replace only the first sha256sum
+          perl -i -pe 'BEGIN{$s=shift} if (!$done && s/'\''[a-f0-9]{64}'\''/'\''$s'\''/) { $done=1 }' "$SHA256SUM" "$PKGBUILD_PATH"
           
           cat "$PKGBUILD_PATH"
 

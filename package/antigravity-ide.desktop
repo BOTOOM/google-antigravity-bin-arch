@@ -1,0 +1,26 @@
+[Desktop Entry]
+Name=Antigravity IDE
+Comment=Experience liftoff - An agentic development platform from Google
+GenericName=Text Editor
+Exec=/usr/share/antigravity-ide/antigravity-ide %F
+Icon=antigravity-ide
+Type=Application
+StartupNotify=false
+StartupWMClass=Antigravity IDE
+Categories=TextEditor;Development;IDE;
+MimeType=application/x-antigravity-workspace;
+Actions=new-empty-window;
+Keywords=antigravity;vscode;ide;google;
+
+[Desktop Action new-empty-window]
+Name=New Empty Window
+Name[de]=Neues leeres Fenster
+Name[es]=Nueva ventana vacía
+Name[fr]=Nouvelle fenêtre vide
+Name[ja]=新しい空のウィンドウ
+Name[ko]=새 빈 창
+Name[ru]=Новое пустое окно
+Name[zh_CN]=新建空窗口
+Name[zh_TW]=開新空視窗
+Exec=/usr/share/antigravity-ide/antigravity-ide --new-window %F
+Icon=antigravity-ide
