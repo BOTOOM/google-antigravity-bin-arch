@@ -1,14 +1,14 @@
 # Maintainer: Edward Diaz <edwardiaz.dev@gmail.com>
 
 pkgname=google-antigravity-bin
-pkgver=1.23.2
+pkgver=2.0.1
 pkgrel=1
-pkgdesc="Google Antigravity IDE (binary) - Precompiled official .deb repackaged for Arch - An agentic development platform from Google, evolving the IDE into the agent-first era."
+pkgdesc="Google Antigravity IDE (binary) - Precompiled official tar.gz repackaged for Arch - An agentic development platform from Google, evolving the IDE into the agent-first era."
 arch=('x86_64')
 url="https://antigravity.google/"
 license=('custom')
-provides=('antigravity' 'google-antigravity')
-conflicts=('antigravity' 'google-antigravity')
+provides=('antigravity' 'antigravity-ide' 'google-antigravity')
+conflicts=('antigravity' 'antigravity-ide' 'google-antigravity')
 depends=('alsa-lib'
     'dbus'
     'gnupg'
@@ -21,57 +21,51 @@ depends=('alsa-lib'
     'xdg-utils'
     'ripgrep'
     'fd')
-makedepends=('tar' 'sed' 'desktop-file-utils')
+makedepends=('tar')
 options=('!strip')
-source=("https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/pool/antigravity-debian/antigravity_1.23.2-1776332190_amd64_d29aa2e214aa69c5a7199fce43624422.deb"
-    "https://gitlab.archlinux.org/archlinux/packaging/packages/code/-/raw/main/code.sh")
-sha256sums=('bdd5f32d26791c36640bd2f713f5ebd6e78fe429c3cc27a72668fda6ad6317a4'
-    '5da1525b5fe804b9192c05e1cbf8d751d852e3717fb2787c7ffe98fd5d93e8c1')
+source=("https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.0.1-4861014005645312/linux-x64/Antigravity%20IDE.tar.gz")
+sha256sums=('747163aa3a8afba4b316f97c40b4a75ca4736a59768a416cd1e881e73ec31ef9')
+
+_appdir="Antigravity IDE"
+_installdir="usr/share/antigravity-ide"
 
 build() {
-	tar -xf "data.tar.xz"
-
-	# Ensure metainfo exists and safely move contents from appdata if present
-	mkdir -p usr/share/metainfo
-	if [ -d usr/share/appdata ]; then
-		shopt -s dotglob nullglob
-		mv usr/share/appdata/* usr/share/metainfo/ || true
-		shopt -u dotglob nullglob
-		rmdir usr/share/appdata 2>/dev/null || true
-	fi
-
     # Ensure proper permissions for chrome-sandbox
-    chmod 4755 usr/share/antigravity/chrome-sandbox
-
-	# Launcher script
-	_app=/usr/share/antigravity
-	sed -e "s|code-flags|antigravity-flags|" code.sh \
-		-e "s|/usr/lib/code/out/cli.js|${_app}/resources/app/out/cli.js|" \
-		-e "s|/usr/lib/code/code.mjs|--app=${_app}/resources/app|" > run.sh
-    
-    # Note: Antigravity structure might differ from VSCode/Windsurf slightly.
-    # If cli.js is not at resources/app/out/cli.js, this might need adjustment.
-    # Based on tar output: usr/share/antigravity/antigravity exists.
-    # Usually the main binary handles CLI args.
-    # We can just symlink the main binary to /usr/bin/antigravity instead of using code.sh if it's self-contained.
-    # Windsurf uses code.sh to handle electron flags and environment variables properly.
-    
-    # Let's stick to a simple symlink for now if we are unsure about cli.js location, 
-    # OR use a simple wrapper script.
-    # Given "google antigravity" is likely based on VS Code, resources/app/out/cli.js should exist.
-    # But if not, we might break it.
-    # Safe bet: Just symlink the binary and pass args.
-    
-    echo "#!/bin/bash" > antigravity.sh
-    echo "exec /usr/share/antigravity/antigravity \"\$@\"" >> antigravity.sh
+    chmod 4755 "${_appdir}/chrome-sandbox"
 }
 
 package() {
-    cp -r --reflink=auto usr "${pkgdir}/usr"
-    
+    # Install application files
+    install -dm755 "${pkgdir}/${_installdir}"
+    cp -r --reflink=auto "${srcdir}/${_appdir}/." "${pkgdir}/${_installdir}/"
+
     # Install the wrapper script
-    install -Dm755 antigravity.sh "${pkgdir}/usr/bin/antigravity"
-    
-    # Symlink for google-antigravity if desired
-    ln -s /usr/bin/antigravity "${pkgdir}/usr/bin/google-antigravity"
+    install -dm755 "${pkgdir}/usr/bin"
+    cat > "${pkgdir}/usr/bin/antigravity-ide" << 'EOF'
+#!/bin/bash
+XDG_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
+FLAG_FILE="${XDG_CONFIG_DIR}/antigravity-ide-flags.conf"
+FLAGS=()
+if [[ -f "$FLAG_FILE" ]]; then
+    mapfile -t FLAGS < <(grep -v '^#' "$FLAG_FILE" | grep -v '^$')
+fi
+exec /usr/share/antigravity-ide/bin/antigravity-ide "${FLAGS[@]}" "$@"
+EOF
+    chmod 755 "${pkgdir}/usr/bin/antigravity-ide"
+
+    # Backward-compatible symlinks
+    ln -s /usr/bin/antigravity-ide "${pkgdir}/usr/bin/antigravity"
+    ln -s /usr/bin/antigravity-ide "${pkgdir}/usr/bin/google-antigravity"
+
+    # Install .desktop file if present in the archive
+    if [ -d "${srcdir}/${_appdir}/resources/app/resources/linux" ]; then
+        for desktop_file in "${srcdir}/${_appdir}/resources/app/resources/linux/"*.desktop; do
+            [ -f "$desktop_file" ] && install -Dm644 "$desktop_file" "${pkgdir}/usr/share/applications/$(basename "$desktop_file")"
+        done
+    fi
+
+    # Install icon if present
+    for icon in "${srcdir}/${_appdir}/resources/app/resources/linux/"*.png; do
+        [ -f "$icon" ] && install -Dm644 "$icon" "${pkgdir}/usr/share/pixmaps/antigravity-ide.png" && break
+    done
 }

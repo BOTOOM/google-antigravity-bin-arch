@@ -78,11 +78,10 @@ sed -i "s/^pkgver=.*/pkgver=$LATEST_VERSION/" "$PKGBUILD_PATH"
 sed -i "s/^pkgrel=.*/pkgrel=1/" "$PKGBUILD_PATH"
 
 # Update source URL
-# Replaces the content inside the first quotes of the source array (assuming it's the first element and quoted)
-sed -i "s|source=(\"[^\"]*\"|source=(\"$LATEST_URL\"|" "$PKGBUILD_PATH"
+sed -i "s|source=(\"[^\"]*\")|source=(\"$LATEST_URL\")|" "$PKGBUILD_PATH"
 
-# Update sha256sum (replaces the first sum in the sha256sums array)
-sed -i "/^sha256sums=('/s/'[^']*'/'$LATEST_SHA256'/" "$PKGBUILD_PATH"
+# Update sha256sum
+sed -i "s/^sha256sums=(.*/sha256sums=('$LATEST_SHA256')/" "$PKGBUILD_PATH"
 
 log "PKGBUILD updated successfully!"
 log "New version: $LATEST_VERSION"

@@ -25,13 +25,13 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ca-certificates curl gnupg apt-transport-https coreutils
+          sudo apt-get install -y ca-certificates curl coreutils
 
       - name: Get latest version
         id: get_version
         run: |
           chmod +x ./scripts/check-antigravity-version.sh
-          OUTPUT=$(sudo ./scripts/check-antigravity-version.sh)
+          OUTPUT=$(./scripts/check-antigravity-version.sh)
           
           VERSION=$(echo "$OUTPUT" | cut -d' ' -f1)
           SHA256SUM=$(echo "$OUTPUT" | cut -d' ' -f2)
@@ -76,15 +76,16 @@ jobs:
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
           SHA256SUM="${{ needs.check-version.outputs.sha256sum }}"
-          DEB_URL="${{ needs.check-version.outputs.deb_url }}"
+          DOWNLOAD_URL="${{ needs.check-version.outputs.deb_url }}"
           PKGBUILD_PATH="package/PKGBUILD"
           README_PATH="README.md"
           
           # --- Update PKGBUILD ---
           sed -i "s/^pkgver=.*/pkgver=$VERSION/" "$PKGBUILD_PATH"
           sed -i "s/^pkgrel=.*/pkgrel=1/" "$PKGBUILD_PATH"
-          sed -i "s|source=(\"[^\"]*\"|source=(\"$DEB_URL\"|" "$PKGBUILD_PATH"
-          sed -i "/^sha256sums=('/s/'[^']*'/'$SHA256SUM'/" "$PKGBUILD_PATH"
+          # Replace the source URL (tar.gz)
+          sed -i "s|source=(\"[^\"]*\")|source=(\"$DOWNLOAD_URL\")|" "$PKGBUILD_PATH"
+          sed -i "s/^sha256sums=(.*/sha256sums=('$SHA256SUM')/" "$PKGBUILD_PATH"
           
           cat "$PKGBUILD_PATH"
 
