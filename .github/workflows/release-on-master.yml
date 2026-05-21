@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install dependencies
         run: |
@@ -73,7 +73,7 @@ jobs:
       - name: Check if release already exists
         id: release_exists
         if: steps.freshness.outputs.is_latest == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const tag = '${{ steps.version.outputs.tag }}';
@@ -109,7 +109,7 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.freshness.outputs.is_latest == 'true' && steps.release_exists.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Antigravity IDE ${{ steps.version.outputs.tag }}
