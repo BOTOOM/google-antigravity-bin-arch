@@ -1,7 +1,7 @@
 # Maintainer: Edward Diaz <edwardiaz.dev@gmail.com>
 
 pkgname=google-antigravity-bin
-pkgver=2.0.1
+pkgver=2.0.2
 pkgrel=1
 pkgdesc="Google Antigravity IDE (binary) - Precompiled official tar.gz repackaged for Arch - An agentic development platform from Google, evolving the IDE into the agent-first era."
 arch=('x86_64')
@@ -23,11 +23,11 @@ depends=('alsa-lib'
     'fd')
 makedepends=('tar')
 options=('!strip')
-source=("https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.0.1-4861014005645312/linux-x64/Antigravity%20IDE.tar.gz"
+source=("https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.0.2-5949548972081152/linux-x64/Antigravity%20IDE.tar.gz"
     "antigravity-ide.desktop"
     "antigravity-ide-url-handler.desktop"
     "antigravity-ide.png")
-sha256sums=('747163aa3a8afba4b316f97c40b4a75ca4736a59768a416cd1e881e73ec31ef9'
+sha256sums=('4952982839fc4c7e124f85feae4479e265cae295718cf96c7c9e44b2ef6a304e'
     'SKIP'
     'SKIP'
     'SKIP')
