@@ -58,6 +58,14 @@ If you want to check for updates directly from Google yourself (e.g., if the rep
 - `package/PKGBUILD`: The Arch Linux package build description file.
 - `.github/workflows/update.yml`: GitHub Action that runs periodically (every 5 hours) to update the `PKGBUILD` in this repository automatically.
 
+## GitHub Actions Storage Retention
+
+To keep GitHub Actions storage usage low (free tier), configure repository retention to **1 day**:
+
+1. Go to `Settings` → `Actions` → `General`.
+2. Set **Artifact and log retention** to `1`.
+3. Save changes.
+
 ## Disclaimer
 
 This is an unofficial package. Google Antigravity is a trademark of Google.
