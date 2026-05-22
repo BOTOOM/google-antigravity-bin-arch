@@ -1,10 +1,10 @@
 # Google Antigravity for Arch Linux
 
-![Version](https://img.shields.io/badge/version-2.0.2-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0.3-blue.svg)
 
 This project allows you to install **Google Antigravity IDE**, Google's AI-powered development platform, on Arch Linux (and derivatives like Manjaro).
 
-**Latest Version Available:** `2.0.2`
+**Latest Version Available:** `2.0.3`
 
 It provides two methods for installation: a quick automated install using the repository's latest info, or a local maintenance mode using Docker to fetch the absolute latest version directly from Google.
 
