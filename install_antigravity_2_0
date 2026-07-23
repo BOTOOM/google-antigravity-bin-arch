@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+
+export PKGBUILD_SUBDIR="package-2.0"
+export ANTIGRAVITY_PKG_NAME="google-antigravity-2-0-bin"
+
+exec "$SCRIPT_DIR/install_antigravity" "$@"

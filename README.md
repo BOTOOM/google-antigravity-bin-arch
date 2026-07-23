@@ -1,16 +1,15 @@
 # Google Antigravity for Arch Linux
 
-![Version](https://img.shields.io/badge/version-2.1.1-blue.svg)
+This project allows you to install both **Google Antigravity IDE** and **Google Antigravity 2.0** on Arch Linux (and derivatives like Manjaro).
 
-This project allows you to install **Google Antigravity IDE**, Google's AI-powered development platform, on Arch Linux (and derivatives like Manjaro).
+**Latest Antigravity IDE Version:** `2.1.1`
+**Latest Antigravity 2.0 Version:** `2.3.1`
 
-**Latest Version Available:** `2.1.1`
-
-It provides two methods for installation: a quick automated install using the repository's latest info, or a local maintenance mode using Docker to fetch the absolute latest version directly from Google.
+It provides quick install scripts for each product and local maintenance scripts that can fetch the absolute latest version directly from Google.
 
 ## Installation Methods
 
-### Option 1: Quick Install (Recommended)
+### Option 1: Quick Install - Antigravity IDE
 This method uses the `PKGBUILD` hosted in this repository, which is automatically updated by GitHub Actions to track the official Antigravity IDE Linux download.
 
 ```bash
@@ -23,8 +22,21 @@ curl -sSL https://raw.githubusercontent.com/BOTOOM/google-antigravity-bin-arch/m
 3. Builds and installs the package using `makepkg`.
 4. Cleans up temporary files.
 
-### Option 2: Local Maintenance (Docker Required)
-If you want to check for updates directly from Google yourself (e.g., if the repository hasn't updated yet), you can use the local Docker-based scripts.
+### Option 2: Quick Install - Antigravity 2.0
+This installs the standalone Antigravity 2.0 package from the dedicated package definition in this repository.
+
+```bash
+curl -sSL https://raw.githubusercontent.com/BOTOOM/google-antigravity-bin-arch/main/install_antigravity_2_0 | bash
+```
+
+**What this does:**
+1. Clones this repository to a temporary directory.
+2. Checks if you have `google-antigravity-2-0-bin` installed.
+3. Builds and installs the package using `makepkg`.
+4. Cleans up temporary files.
+
+### Option 3: Local Maintenance (Docker Required)
+If you want to check for updates directly from Google yourself (e.g., if the repository hasn't updated yet), you can use the local Docker-based scripts for either product.
 
 **Prerequisites:**
 - Docker
@@ -37,26 +49,30 @@ If you want to check for updates directly from Google yourself (e.g., if the rep
    cd google-antigravity-bin-arch
    ```
 
-2. Run the local check and update script:
+2. Run the local check and update script for the product you want:
    ```bash
    ./check_and_update_local.sh
+   ./check_and_update_local_2_0.sh
    ```
 
 **What this does:**
 1. Builds a minimal Ubuntu Docker image.
-2. Fetches the latest version info from Google's download page.
-3. Updates the local `package/PKGBUILD` file with this new information.
+2. Fetches the latest version info from Google's release metadata service.
+3. Updates the matching local `PKGBUILD` file with this new information.
 4. Compares the new version with your installed version.
 5. Asks if you want to build and install the update immediately.
 
 ## Project Structure
 
 - `install_antigravity`: The standalone installation script used by the curl command.
+- `install_antigravity_2_0`: The standalone installation script for Antigravity 2.0.
 - `check_and_update_local.sh`: Local maintenance script that orchestrates the Docker check and update process.
+- `check_and_update_local_2_0.sh`: Local maintenance script for Antigravity 2.0.
 - `_install_local.sh`: Internal script used by `check_and_update_local.sh` to perform the actual installation.
 - `update.sh`: The core logic that runs the Docker container to fetch version info.
-- `package/PKGBUILD`: The Arch Linux package build description file.
-- `.github/workflows/update.yml`: GitHub Action that runs periodically (every 5 hours) to update the `PKGBUILD` in this repository automatically.
+- `package/PKGBUILD`: The Arch Linux package build description file for Antigravity IDE.
+- `package-2.0/PKGBUILD`: The Arch Linux package build description file for Antigravity 2.0.
+- `.github/workflows/update.yml`: GitHub Action that runs periodically (every 5 hours) to update both package definitions automatically.
 
 ## GitHub Actions Storage Retention
 
@@ -69,4 +85,4 @@ To keep GitHub Actions storage usage low (free tier), configure repository reten
 ## Disclaimer
 
 This is an unofficial package. Google Antigravity is a trademark of Google.
-This package repackages the official `.tar.gz` archive distributed by Google.
+These packages repackage the official `.tar.gz` archives distributed by Google.

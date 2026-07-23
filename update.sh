@@ -3,7 +3,9 @@ set -eo pipefail
 
 # --- Configuration ---
 readonly DOCKER_IMAGE_NAME="antigravity-version-checker"
-readonly PKGBUILD_PATH="package/PKGBUILD"
+: "${ANTIGRAVITY_CHANNEL:=ide}"
+: "${PKGBUILD_PATH:=package/PKGBUILD}"
+: "${PRODUCT_DISPLAY_NAME:=Antigravity IDE}"
 
 # --- Helper Functions ---
 log() {
@@ -45,11 +47,11 @@ CURRENT_VERSION=$(grep -m1 '^pkgver=' "$PKGBUILD_PATH" | cut -d'=' -f2)
 if [ -z "$CURRENT_VERSION" ]; then
     error_exit "Could not read current pkgver from '$PKGBUILD_PATH'."
 fi
-log "Current version in PKGBUILD is: $CURRENT_VERSION"
+log "Current $PRODUCT_DISPLAY_NAME version in PKGBUILD is: $CURRENT_VERSION"
 
 # 3. Run Docker container to get the latest version and SHA256 sum
 log "Running version check container..."
-CHECK_OUTPUT=$(docker run --rm "$DOCKER_IMAGE_NAME")
+CHECK_OUTPUT=$(docker run --rm "$DOCKER_IMAGE_NAME" "$ANTIGRAVITY_CHANNEL")
 
 if [ -z "$CHECK_OUTPUT" ]; then
     error_exit "Failed to get version from Docker container. The command returned no output."
@@ -62,15 +64,15 @@ LATEST_URL=$(echo "$CHECK_OUTPUT" | awk '{print $3}')
 if [ -z "$LATEST_VERSION" ] || [ -z "$LATEST_SHA256" ] || [ -z "$LATEST_URL" ]; then
     error_exit "Could not parse version, SHA256 or URL from container output: '$CHECK_OUTPUT'"
 fi
-log "Latest available version is: $LATEST_VERSION"
+log "Latest available $PRODUCT_DISPLAY_NAME version is: $LATEST_VERSION"
 
 # 4. Compare versions and update if necessary
 if [ "$CURRENT_VERSION" == "$LATEST_VERSION" ]; then
-    log "The package is already up-to-date. No changes needed."
+    log "$PRODUCT_DISPLAY_NAME is already up-to-date. No changes needed."
     exit 0
 fi
 
-log "New version available. Updating PKGBUILD from $CURRENT_VERSION to $LATEST_VERSION..."
+log "New $PRODUCT_DISPLAY_NAME version available. Updating PKGBUILD from $CURRENT_VERSION to $LATEST_VERSION..."
 
 # Update pkgver
 sed -i "s/^pkgver=.*/pkgver=$LATEST_VERSION/" "$PKGBUILD_PATH"
@@ -85,7 +87,7 @@ perl -i -pe 'BEGIN{$u=shift} if (!$done && s{source=\("[^"]*"}{source=("$u"}) { 
 perl -i -pe 'BEGIN{$s=shift} if (!$done && s/'"'"'[a-f0-9]{64}'"'"'/'"'"'$s'"'"'/) { $done=1 }' "$LATEST_SHA256" "$PKGBUILD_PATH"
 
 log "PKGBUILD updated successfully!"
-log "New version: $LATEST_VERSION"
+log "New $PRODUCT_DISPLAY_NAME version: $LATEST_VERSION"
 log "New SHA256: $LATEST_SHA256"
 log "New URL: $LATEST_URL"
 

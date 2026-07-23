@@ -1,9 +1,11 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 # Configuration
-PKG_NAME="google-antigravity-bin"
-PKGBUILD_PATH="package/PKGBUILD"
+: "${PKG_NAME:=google-antigravity-bin}"
+: "${PKGBUILD_PATH:=package/PKGBUILD}"
+: "${ANTIGRAVITY_CHANNEL:=ide}"
+: "${PRODUCT_DISPLAY_NAME:=Antigravity IDE}"
 
 # Colors
 GREEN='\033[0;32m'
@@ -24,7 +26,10 @@ success() {
 }
 
 # 1. Run update.sh to check for upstream updates and update PKGBUILD if needed
-log "Checking for upstream updates..."
+log "Checking for upstream ${PRODUCT_DISPLAY_NAME} updates..."
+ANTIGRAVITY_CHANNEL="$ANTIGRAVITY_CHANNEL" \
+PKGBUILD_PATH="$PKGBUILD_PATH" \
+PRODUCT_DISPLAY_NAME="$PRODUCT_DISPLAY_NAME" \
 ./update.sh
 
 # 2. Check Installed Version vs PKGBUILD Version
@@ -59,6 +64,8 @@ if [ "$TARGET_VERSION" != "$INSTALLED_VERSION" ]; then
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
         log "Starting installation..."
+        PKGBUILD_SUBDIR="$(dirname "$PKGBUILD_PATH")" \
+        ANTIGRAVITY_PKG_NAME="$PKG_NAME" \
         ./_install_local.sh
     else
         log "Update skipped by user."

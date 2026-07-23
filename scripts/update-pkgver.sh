@@ -10,7 +10,19 @@ fi
 
 PACKAGE=$1
 VERSION=$2
-PKGBUILD_PATH="package/PKGBUILD"
+
+case "$PACKAGE" in
+    google-antigravity-bin|antigravity-ide|ide)
+        PKGBUILD_PATH="${PKGBUILD_PATH:-package/PKGBUILD}"
+        ;;
+    google-antigravity-2-0-bin|antigravity-2.0|antigravity-2-0|2.0|hub)
+        PKGBUILD_PATH="${PKGBUILD_PATH:-package-2.0/PKGBUILD}"
+        ;;
+    *)
+        echo "Error: unsupported package '$PACKAGE'"
+        exit 1
+        ;;
+esac
 
 if [ ! -f "$PKGBUILD_PATH" ]; then
     echo "Error: PKGBUILD not found for package $PACKAGE"
