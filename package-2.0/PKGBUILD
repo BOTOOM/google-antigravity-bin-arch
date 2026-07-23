@@ -1,0 +1,69 @@
+# Maintainer: Edward Diaz <edwardiaz.dev@gmail.com>
+
+pkgname=google-antigravity-2-0-bin
+pkgver=2.3.1
+pkgrel=1
+pkgdesc="Google Antigravity 2.0 (binary) - Precompiled official tar.gz repackaged for Arch - Dedicated agent orchestration platform from Google."
+arch=('x86_64')
+url="https://antigravity.google/"
+license=('custom')
+provides=('antigravity-2-0' 'google-antigravity-2-0')
+depends=('alsa-lib'
+    'at-spi2-core'
+    'cups'
+    'dbus'
+    'expat'
+    'glib2'
+    'gtk3'
+    'libdrm'
+    'libsecret'
+    'libx11'
+    'libxcb'
+    'libxcomposite'
+    'libxdamage'
+    'libxext'
+    'libxfixes'
+    'libxkbfile'
+    'libxrandr'
+    'libxss'
+    'mesa'
+    'nspr'
+    'nss'
+    'pango'
+    'xdg-utils')
+makedepends=('tar')
+options=('!strip')
+source=("https://storage.googleapis.com/antigravity-public/antigravity-hub/2.3.1-5358163105546240/linux-x64/Antigravity.tar.gz"
+    "antigravity-2-0.desktop"
+    "antigravity-2-0.png")
+sha256sums=('7a1992149e396ecc12e7a42b155638958701daaa65bed07cdcfe639b8267c745'
+    'SKIP'
+    'SKIP')
+
+_find_appdir() {
+    find "${srcdir}" -maxdepth 1 -mindepth 1 -type d -name 'Antigravity*' | sort | head -n1
+}
+
+build() {
+    local appdir
+    appdir="$(_find_appdir)"
+    [ -n "$appdir" ] || return 1
+
+    chmod 4755 "${appdir}/chrome-sandbox"
+}
+
+package() {
+    local appdir
+    appdir="$(_find_appdir)"
+    [ -n "$appdir" ] || return 1
+
+    install -dm755 "${pkgdir}/usr/share/antigravity-2.0"
+    cp -r --reflink=auto "${appdir}/." "${pkgdir}/usr/share/antigravity-2.0/"
+
+    install -dm755 "${pkgdir}/usr/bin"
+    ln -s "/usr/share/antigravity-2.0/antigravity" "${pkgdir}/usr/bin/antigravity-2.0"
+    ln -s "/usr/share/antigravity-2.0/antigravity" "${pkgdir}/usr/bin/google-antigravity-2-0"
+
+    install -Dm644 "${srcdir}/antigravity-2-0.desktop" "${pkgdir}/usr/share/applications/antigravity-2-0.desktop"
+    install -Dm644 "${srcdir}/antigravity-2-0.png" "${pkgdir}/usr/share/pixmaps/antigravity-2-0.png"
+}

@@ -1,4 +1,4 @@
-name: Update Google Antigravity IDE PKGBUILD
+name: Update Google Antigravity packages
 
 on:
   workflow_dispatch:
@@ -10,13 +10,26 @@ permissions:
   pull-requests: write
 
 jobs:
-  check-version:
+  update-package:
     runs-on: ubuntu-latest
-    outputs:
-      changed: ${{ steps.check_version.outputs.changed }}
-      version: ${{ steps.get_version.outputs.version }}
-      sha256sum: ${{ steps.get_version.outputs.sha256sum }}
-      download_url: ${{ steps.get_version.outputs.download_url }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - product_id: ide
+            product_display_name: Antigravity IDE
+            package_dir: package
+            version_channel: ide
+            package_name: google-antigravity-bin
+            readme_label: Latest Antigravity IDE Version
+            branch_prefix: update-antigravity-ide
+          - product_id: antigravity-2-0
+            product_display_name: Antigravity 2.0
+            package_dir: package-2.0
+            version_channel: 2.0
+            package_name: google-antigravity-2-0-bin
+            readme_label: Latest Antigravity 2.0 Version
+            branch_prefix: update-antigravity-2-0
     steps:
       - uses: actions/checkout@v6
         with:
@@ -25,96 +38,79 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ca-certificates curl coreutils
+          sudo apt-get install -y ca-certificates curl coreutils perl
 
       - name: Get latest version
         id: get_version
         run: |
           chmod +x ./scripts/check-antigravity-version.sh
-          OUTPUT=$(./scripts/check-antigravity-version.sh)
-          
+          OUTPUT=$(./scripts/check-antigravity-version.sh "${{ matrix.version_channel }}")
+
           VERSION=$(echo "$OUTPUT" | cut -d' ' -f1)
           SHA256SUM=$(echo "$OUTPUT" | cut -d' ' -f2)
           DOWNLOAD_URL=$(echo "$OUTPUT" | cut -d' ' -f3)
-          
-          echo "Detected version: $VERSION"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "sha256sum=$SHA256SUM" >> $GITHUB_OUTPUT
-          echo "download_url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
+
+          echo "Detected version for ${{ matrix.product_display_name }}: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "sha256sum=$SHA256SUM" >> "$GITHUB_OUTPUT"
+          echo "download_url=$DOWNLOAD_URL" >> "$GITHUB_OUTPUT"
 
       - name: Check if version changed
         id: check_version
         run: |
-          CURRENT_VERSION=$(grep -oP 'pkgver=\K[^"]+' package/PKGBUILD || true)
-          if [ -z "$CURRENT_VERSION" ]; then
-             CURRENT_VERSION=$(grep '^pkgver=' package/PKGBUILD | cut -d'=' -f2)
-          fi
-          
+          PKGBUILD_PATH="${{ matrix.package_dir }}/PKGBUILD"
+          CURRENT_VERSION=$(grep '^pkgver=' "$PKGBUILD_PATH" | cut -d'=' -f2)
           NEW_VERSION="${{ steps.get_version.outputs.version }}"
-          
+
           echo "Current version: $CURRENT_VERSION"
           echo "New version: $NEW_VERSION"
-          
+
           if [ "$CURRENT_VERSION" != "$NEW_VERSION" ] && [ -n "$NEW_VERSION" ]; then
             echo "Version changed!"
-            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "Version unchanged or failed to detect."
-            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-  update-package:
-    needs: check-version
-    if: needs.check-version.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
       - name: Update PKGBUILD and README
+        if: steps.check_version.outputs.changed == 'true'
         run: |
-          VERSION="${{ needs.check-version.outputs.version }}"
-          SHA256SUM="${{ needs.check-version.outputs.sha256sum }}"
-          DOWNLOAD_URL="${{ needs.check-version.outputs.download_url }}"
-          PKGBUILD_PATH="package/PKGBUILD"
+          VERSION="${{ steps.get_version.outputs.version }}"
+          SHA256SUM="${{ steps.get_version.outputs.sha256sum }}"
+          DOWNLOAD_URL="${{ steps.get_version.outputs.download_url }}"
+          PKGBUILD_PATH="${{ matrix.package_dir }}/PKGBUILD"
           README_PATH="README.md"
-          
-          # --- Update PKGBUILD ---
+
           sed -i "s/^pkgver=.*/pkgver=$VERSION/" "$PKGBUILD_PATH"
           sed -i "s/^pkgrel=.*/pkgrel=1/" "$PKGBUILD_PATH"
-          # Replace only the first source URL (tar.gz)
           perl -i -pe 'BEGIN{$u=shift} if (!$done && s{source=\("[^"]*"}{source=("$u"}) { $done=1 }' "$DOWNLOAD_URL" "$PKGBUILD_PATH"
-          # Replace only the first sha256sum
           perl -i -pe 'BEGIN{$s=shift} if (!$done && s/'\''[a-f0-9]{64}'\''/'\''$s'\''/) { $done=1 }' "$SHA256SUM" "$PKGBUILD_PATH"
-          
-          cat "$PKGBUILD_PATH"
 
-          # --- Update README.md ---
-          sed -i "s/\*\*Latest Version Available:\*\* \`.*\`/**Latest Version Available:** \`$VERSION\`/" "$README_PATH"
-          sed -i "s/badge\/version-.*-blue/badge\/version-$VERSION-blue/" "$README_PATH"
+          sed -i "s/\*\*${{ matrix.readme_label }}:\*\* \`.*\`/**${{ matrix.readme_label }}:** \`$VERSION\`/" "$README_PATH"
 
       - name: Create Pull Request
         id: cpr
+        if: steps.check_version.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: update antigravity ide to ${{ needs.check-version.outputs.version }}"
-          title: "Update Antigravity IDE to ${{ needs.check-version.outputs.version }}"
+          commit-message: "chore: update ${{ matrix.product_id }} to ${{ steps.get_version.outputs.version }}"
+          title: "Update ${{ matrix.product_display_name }} to ${{ steps.get_version.outputs.version }}"
           body: |
-            This PR updates the google-antigravity package to Antigravity IDE version ${{ needs.check-version.outputs.version }}.
-            
+            This PR updates `${{ matrix.package_name }}` to ${{ matrix.product_display_name }} version ${{ steps.get_version.outputs.version }}.
+
             - Updated PKGBUILD version, checksum, and URL.
-            - Updated README.md with the new version number and badge.
-            
+            - Updated README.md with the new version number.
+
             This is an automated PR created by the version check workflow.
-          branch: "update-antigravity-ide-${{ needs.check-version.outputs.version }}"
+          branch: "${{ matrix.branch_prefix }}-${{ steps.get_version.outputs.version }}"
           base: "main"
           labels: "automated pr"
           delete-branch: true
 
       - name: Merge Pull Request
-        if: ${{ steps.cpr.outputs.pull-request-operation == 'created' }}
+        if: steps.check_version.outputs.changed == 'true' && steps.cpr.outputs.pull-request-operation == 'created'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}

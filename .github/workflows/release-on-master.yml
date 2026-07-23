@@ -1,4 +1,4 @@
-name: Create GitHub Release on main
+name: Create GitHub Releases on main
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - main
   workflow_run:
     workflows:
-      - Update Google Antigravity IDE PKGBUILD
+      - Update Google Antigravity packages
     types:
       - completed
 
@@ -18,6 +18,18 @@ jobs:
   create-release:
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - product_display_name: Antigravity IDE
+            package_dir: package
+            version_channel: ide
+            tag_prefix: antigravity-ide-v
+          - product_display_name: Antigravity 2.0
+            package_dir: package-2.0
+            version_channel: 2.0
+            tag_prefix: antigravity-2-0-v
 
     steps:
       - name: Checkout repository
@@ -32,7 +44,7 @@ jobs:
         id: upstream
         run: |
           chmod +x ./scripts/check-antigravity-version.sh
-          OUTPUT=$(./scripts/check-antigravity-version.sh)
+          OUTPUT=$(./scripts/check-antigravity-version.sh "${{ matrix.version_channel }}")
           VERSION=$(echo "$OUTPUT" | cut -d' ' -f1 | tr -d '[:space:]')
 
           if [ -z "$VERSION" ]; then
@@ -45,15 +57,15 @@ jobs:
       - name: Extract version from PKGBUILD
         id: version
         run: |
-          VERSION=$(grep '^pkgver=' package/PKGBUILD | cut -d'=' -f2 | tr -d '[:space:]')
+          VERSION=$(grep '^pkgver=' "${{ matrix.package_dir }}/PKGBUILD" | cut -d'=' -f2 | tr -d '[:space:]')
 
           if [ -z "$VERSION" ]; then
-            echo "Could not determine version from package/PKGBUILD"
+            echo "Could not determine version from ${{ matrix.package_dir }}/PKGBUILD"
             exit 1
           fi
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=${{ matrix.tag_prefix }}$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Check if main is on latest upstream version
         id: freshness
@@ -105,18 +117,18 @@ jobs:
       - name: Skip release on stale main
         if: steps.freshness.outputs.is_latest != 'true'
         run: |
-          echo "package/PKGBUILD is behind upstream. Skipping release until main is updated."
+          echo "${{ matrix.package_dir }}/PKGBUILD is behind upstream. Skipping release until main is updated."
 
       - name: Create GitHub Release
         if: steps.freshness.outputs.is_latest == 'true' && steps.release_exists.outputs.exists == 'false'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Antigravity IDE ${{ steps.version.outputs.tag }}
+          name: ${{ matrix.product_display_name }} v${{ steps.version.outputs.version }}
           target_commitish: ${{ steps.target.outputs.sha }}
           generate_release_notes: true
           body: |
-            Automated Antigravity IDE release created after merge/push to main.
+            Automated ${{ matrix.product_display_name }} release created after merge/push to main.
             Package version: `${{ steps.version.outputs.version }}`.
 
       - name: Release already exists
