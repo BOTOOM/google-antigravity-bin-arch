@@ -8,10 +8,12 @@ TEMP_DIR=$(mktemp -d)
 cleanup() { rm -rf "$TEMP_DIR"; }
 trap cleanup EXIT
 
-# Step 1: Find the JS bundle name from the download page
+# Step 1: Find the JS bundle URL from the download page.
+# Match any script src attribute containing "main" and ending in ".js",
+# handling both relative (/path/main-*.js) and absolute (https://…/main-*.js) URLs.
 JS_FILE=$(
     curl -fsSL --compressed "$DOWNLOAD_PAGE" \
-        | grep -oP 'main-[A-Z0-9]+\.js' \
+        | grep -oP '(?<=src=")[^"]*main[^"]*\.js' \
         | head -1 \
         || true
 )
@@ -20,11 +22,16 @@ if [ -z "$JS_FILE" ]; then
     exit 1
 fi
 
+# Normalize to an absolute URL: if the path is relative, prepend the base origin.
+if [[ "$JS_FILE" != http* ]]; then
+    JS_FILE="https://antigravity.google/${JS_FILE#/}"
+fi
+
 # Step 2: Extract the latest Antigravity IDE Linux x64 tar.gz download URL from the JS.
 # The download page currently mixes multiple product channels, so only track concrete
 # Antigravity IDE artifacts and choose the highest semantic version found.
 DOWNLOAD_URL=$(
-    curl -fsSL --compressed "https://antigravity.google/$JS_FILE" \
+    curl -fsSL --compressed "$JS_FILE" \
         | grep -oP 'https://edgedl\.me\.gvt1\.com/edgedl/release2/j0qc3/antigravity/stable/[0-9]+\.[0-9]+\.[0-9]+-[0-9]+/linux-x64/Antigravity%20IDE\.tar\.gz' \
         | awk '
             {
