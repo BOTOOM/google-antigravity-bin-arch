@@ -3,6 +3,7 @@
 set -euo pipefail
 
 CHANNEL="${1:-${ANTIGRAVITY_CHANNEL:-ide}}"
+DOWNLOAD_PAGE="https://antigravity.google/download"
 
 TEMP_DIR=$(mktemp -d)
 cleanup() { rm -rf "$TEMP_DIR"; }
@@ -12,15 +13,11 @@ configure_channel() {
     case "$CHANNEL" in
         ide)
             PRODUCT_DISPLAY_NAME="Antigravity IDE"
-            RELEASES_URL="https://antigravity-ide-auto-updater-974169037036.us-central1.run.app/releases"
-            DOWNLOAD_BASE_URL="https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable"
-            ARCHIVE_NAME="Antigravity%20IDE.tar.gz"
+            DOWNLOAD_URL_PATTERN='https://edgedl\.me\.gvt1\.com/edgedl/release2/j0qc3/antigravity/stable/[0-9]+\.[0-9]+\.[0-9]+-[0-9]+/linux-x64/Antigravity%20IDE\.tar\.gz'
             ;;
         2.0|2|hub|app)
             PRODUCT_DISPLAY_NAME="Antigravity 2.0"
-            RELEASES_URL="https://antigravity-auto-updater-974169037036.us-central1.run.app/releases"
-            DOWNLOAD_BASE_URL="https://storage.googleapis.com/antigravity-public/antigravity-hub"
-            ARCHIVE_NAME="Antigravity.tar.gz"
+            DOWNLOAD_URL_PATTERN='https://storage\.googleapis\.com/antigravity-public/antigravity-hub/[0-9]+\.[0-9]+\.[0-9]+-[0-9]+/linux-x64/Antigravity\.tar\.gz'
             ;;
         *)
             echo "Unsupported Antigravity channel: $CHANNEL" >&2
@@ -29,25 +26,36 @@ configure_channel() {
     esac
 }
 
-extract_manifest_field() {
-    local manifest="$1"
-    local field_name="$2"
-
-    printf '%s' "$manifest" | grep -oPm1 "\"${field_name}\"\\s*:\\s*\"\\K[^\"]+"
+extract_version() {
+    printf '%s' "$1" | grep -oP '/(?:stable/)?\K[0-9]+\.[0-9]+\.[0-9]+(?=-[0-9]+/linux-x64/)'
 }
 
 configure_channel
 
-MANIFEST=$(curl -fsSL --compressed "$RELEASES_URL")
-VERSION=$(extract_manifest_field "$MANIFEST" "version" || true)
-EXECUTION_ID=$(extract_manifest_field "$MANIFEST" "execution_id" || true)
+DOWNLOAD_URL=$(
+    curl -fsSL --compressed "$DOWNLOAD_PAGE" \
+        | grep -oP "$DOWNLOAD_URL_PATTERN" \
+        | sort -u \
+        | while IFS= read -r url; do
+            version=$(extract_version "$url")
+            printf '%s\t%s\n' "$version" "$url"
+        done \
+        | sort -t $'\t' -k1,1V \
+        | tail -n1 \
+        | cut -f2- \
+        || true
+)
 
-if [ -z "$VERSION" ] || [ -z "$EXECUTION_ID" ]; then
-    echo "Failed to extract ${PRODUCT_DISPLAY_NAME} release metadata" >&2
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo "Failed to find the ${PRODUCT_DISPLAY_NAME} Linux x64 download URL" >&2
     exit 1
 fi
 
-DOWNLOAD_URL="${DOWNLOAD_BASE_URL}/${VERSION}-${EXECUTION_ID}/linux-x64/${ARCHIVE_NAME}"
+VERSION=$(extract_version "$DOWNLOAD_URL" || true)
+if [ -z "$VERSION" ]; then
+    echo "Failed to parse ${PRODUCT_DISPLAY_NAME} version from download URL" >&2
+    exit 1
+fi
 
 ARCHIVE_FILE="$TEMP_DIR/antigravity-${CHANNEL//[^a-zA-Z0-9]/-}-${VERSION}.tar.gz"
 echo "Downloading ${PRODUCT_DISPLAY_NAME} from $DOWNLOAD_URL ..." >&2
