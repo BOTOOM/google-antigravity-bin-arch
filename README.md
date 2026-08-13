@@ -2,7 +2,7 @@
 
 This project allows you to install both **Google Antigravity IDE** and **Google Antigravity 2.0** on Arch Linux (and derivatives like Manjaro).
 
-**Latest Antigravity IDE Version:** `2.1.1`
+**Latest Antigravity IDE Version:** `2.5.5`
 **Latest Antigravity 2.0 Version:** `2.8.0`
 
 It provides quick install scripts for each product and local maintenance scripts that can fetch the absolute latest version directly from Google.
