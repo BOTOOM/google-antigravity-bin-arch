@@ -16,8 +16,15 @@ permissions:
 
 jobs:
   create-release:
+    # Pushes to main and the completion of the update workflow both fire for the
+    # same merge, so releases are serialized per product to avoid two runs
+    # racing to create the same tag.
+    concurrency:
+      group: create-release-${{ matrix.tag_prefix }}
+      cancel-in-progress: false
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
