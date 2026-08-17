@@ -99,8 +99,9 @@ jobs:
 
           sed -i "s/\*\*${{ matrix.readme_label }}:\*\* \`.*\`/**${{ matrix.readme_label }}:** \`$VERSION\`/" "$README_PATH"
 
+      # Runs even when the version is unchanged: that is exactly the state in
+      # which an older automated PR is stale and would otherwise stay open.
       - name: Close superseded automated pull requests
-        if: steps.check_version.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_BRANCH: "${{ matrix.branch_prefix }}-${{ steps.get_version.outputs.version }}"
