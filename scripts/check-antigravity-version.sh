@@ -4,6 +4,11 @@ set -euo pipefail
 
 CHANNEL="${1:-${ANTIGRAVITY_CHANNEL:-ide}}"
 DOWNLOAD_PAGE="https://antigravity.google/download"
+CURL_RETRY_OPTS=(--retry 5 --retry-delay 5 --retry-connrefused --connect-timeout 15)
+
+if curl --help all 2>/dev/null | grep -q -- '--retry-all-errors'; then
+    CURL_RETRY_OPTS+=(--retry-all-errors)
+fi
 
 TEMP_DIR=$(mktemp -d)
 cleanup() { rm -rf "$TEMP_DIR"; }
@@ -33,7 +38,7 @@ extract_version() {
 configure_channel
 
 DOWNLOAD_URL=$(
-    curl -fsSL --compressed "$DOWNLOAD_PAGE" \
+    curl -fsSL --compressed "${CURL_RETRY_OPTS[@]}" "$DOWNLOAD_PAGE" \
         | grep -oP "$DOWNLOAD_URL_PATTERN" \
         | sort -u \
         | while IFS= read -r url; do
@@ -59,7 +64,7 @@ fi
 
 ARCHIVE_FILE="$TEMP_DIR/antigravity-${CHANNEL//[^a-zA-Z0-9]/-}-${VERSION}.tar.gz"
 echo "Downloading ${PRODUCT_DISPLAY_NAME} from $DOWNLOAD_URL ..." >&2
-if ! curl -fsSL --output "$ARCHIVE_FILE" "$DOWNLOAD_URL"; then
+if ! curl -fsSL "${CURL_RETRY_OPTS[@]}" --output "$ARCHIVE_FILE" "$DOWNLOAD_URL"; then
     echo "Failed to download archive from $DOWNLOAD_URL" >&2
     exit 1
 fi
