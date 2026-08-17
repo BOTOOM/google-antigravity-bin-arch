@@ -9,11 +9,20 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: update-antigravity-packages
+  cancel-in-progress: false
+
 jobs:
   update-package:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
+      # Both products bump adjacent lines in README.md, so branching them from
+      # the same commit in parallel produces unmergeable PRs. Run one at a time
+      # and always branch from the current tip of main.
+      max-parallel: 1
       matrix:
         include:
           - product_id: ide
@@ -33,6 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Install dependencies
@@ -89,6 +99,26 @@ jobs:
 
           sed -i "s/\*\*${{ matrix.readme_label }}:\*\* \`.*\`/**${{ matrix.readme_label }}:** \`$VERSION\`/" "$README_PATH"
 
+      # Runs even when the version is unchanged: that is exactly the state in
+      # which an older automated PR is stale and would otherwise stay open.
+      - name: Close superseded automated pull requests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Only spare the branch this run is about to open a PR for; when the
+          # version is unchanged nothing is spared, so a PR left behind at the
+          # current version (e.g. one that failed to merge) also gets closed.
+          NEW_BRANCH: "${{ steps.check_version.outputs.changed == 'true' && format('{0}-{1}', matrix.branch_prefix, steps.get_version.outputs.version) || '' }}"
+          BRANCH_PREFIX: "${{ matrix.branch_prefix }}"
+        run: |
+          gh pr list --state open --base main --json number,headRefName \
+            --repo "${{ github.repository }}" \
+            --jq '.[] | select(.headRefName | startswith(env.BRANCH_PREFIX + "-")) | select(.headRefName != env.NEW_BRANCH) | .number' \
+            | while read -r pr; do
+                echo "Closing superseded PR #$pr"
+                gh pr close "$pr" --delete-branch --repo "${{ github.repository }}" \
+                  --comment "Superseded by a newer automated version bump."
+              done
+
       - name: Create Pull Request
         id: cpr
         if: steps.check_version.outputs.changed == 'true'
@@ -110,11 +140,35 @@ jobs:
           delete-branch: true
 
       - name: Merge Pull Request
-        if: steps.check_version.outputs.changed == 'true' && steps.cpr.outputs.pull-request-operation == 'created'
+        # 'updated' matters too: a PR whose merge failed earlier is reused by
+        # create-pull-request, and must still be retried instead of stranded.
+        if: steps.check_version.outputs.changed == 'true' && steps.cpr.outputs.pull-request-number != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
         run: |
           echo "Attempting to merge PR #${PR_NUMBER}"
-          gh pr merge "$PR_NUMBER" --merge --delete-branch --repo "${{ github.repository }}"
-          echo "PR #${PR_NUMBER} merged."
+
+          # GitHub computes mergeability asynchronously, so a freshly created PR
+          # reports UNKNOWN for a few seconds and `gh pr merge` fails on it.
+          for attempt in $(seq 1 10); do
+            STATE=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json mergeable --jq .mergeable)
+            echo "Attempt $attempt: mergeable=$STATE"
+
+            case "$STATE" in
+              MERGEABLE)
+                gh pr merge "$PR_NUMBER" --merge --delete-branch --repo "${{ github.repository }}"
+                echo "PR #${PR_NUMBER} merged."
+                exit 0
+                ;;
+              CONFLICTING)
+                echo "PR #${PR_NUMBER} conflicts with main and needs manual resolution." >&2
+                exit 1
+                ;;
+            esac
+
+            sleep 10
+          done
+
+          echo "Timed out waiting for PR #${PR_NUMBER} to become mergeable." >&2
+          exit 1
