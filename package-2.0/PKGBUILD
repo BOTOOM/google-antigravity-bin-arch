@@ -1,7 +1,7 @@
 # Maintainer: Edward Diaz <edwardiaz.dev@gmail.com>
 
 pkgname=google-antigravity-2-0-bin
-pkgver=2.29.0
+pkgver=2.29.1
 pkgrel=1
 pkgdesc="Google Antigravity 2.0 (binary) - Precompiled official tar.gz repackaged for Arch - Dedicated agent orchestration platform from Google."
 arch=('x86_64')
@@ -33,10 +33,10 @@ depends=('alsa-lib'
     'xdg-utils')
 makedepends=('tar')
 options=('!strip')
-source=("https://storage.googleapis.com/antigravity-public/antigravity-hub/2.29.0-5723181030440960/linux-x64/Antigravity.tar.gz"
+source=("https://storage.googleapis.com/antigravity-public/antigravity-hub/2.29.1-5241471524274176/linux-x64/Antigravity.tar.gz"
     "antigravity-2-0.desktop"
     "antigravity-2-0.png")
-sha256sums=('3a675704b9b3a3070e06c0d50d3533043af54521cd15c65494e9cdc2bf189664'
+sha256sums=('4678604251391feab8ab77e6e5a523e350be689810f338c74d5edce690e43fa3'
     'SKIP'
     'SKIP')
 
